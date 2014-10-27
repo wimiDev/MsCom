@@ -4,8 +4,7 @@
 
 #pragma once
 #include "afxwin.h"
-
-
+#include"MsComSR.h"
 // CMsComDlg 对话框
 class CMsComDlg : public CDialogEx
 {
@@ -13,6 +12,7 @@ class CMsComDlg : public CDialogEx
 public:
 	CMsComDlg(CWnd* pParent = NULL);	// 标准构造函数
 	HANDLE m_hComHandle;
+	MsComSR ComSR;
 // 对话框数据
 	enum { IDD = IDD_MSCOM_DIALOG };
 	protected:
@@ -35,6 +35,8 @@ public:
 	afx_msg void OnBnClickedExit();
 	afx_msg void OnBnClickedOpen();
 	void RecvThread();
+	static  DWORD WINAPI MyThreadFunction(LPVOID pParam);
+	//HANDLE CreateRecvThread();
 	CComboBox Comnum;
 	CComboBox Bps;
 	CComboBox DataBit;
@@ -51,4 +53,5 @@ public:
 	// 接收到的数据
 	CString RecvData;
 	afx_msg void OnBnClickedClose();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

@@ -6,7 +6,6 @@
 #include "MsCom.h"
 #include "MsComDlg.h"
 #include "afxdialogex.h"
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -47,11 +46,12 @@ END_MESSAGE_MAP()
 
 
 CMsComDlg::CMsComDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CMsComDlg::IDD, pParent)
-	, SendData(_T(""))
-	, RecvData(_T(""))
+: CDialogEx(CMsComDlg::IDD, pParent)
+, SendData(_T(""))
+, RecvData(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	ComSR = MsComSR();
 }
 
 void CMsComDlg::DoDataExchange(CDataExchange* pDX)
@@ -81,6 +81,7 @@ BEGIN_MESSAGE_MAP(CMsComDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SEND, &CMsComDlg::OnBnClickedSend)
 	ON_BN_CLICKED(IDC_BEGINRECV, &CMsComDlg::OnBnClickedBedinrecv)
 	ON_BN_CLICKED(IDC_CLOSE, &CMsComDlg::OnBnClickedClose)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -118,6 +119,7 @@ BOOL CMsComDlg::OnInitDialog()
 	ShowWindow(SW_MAXIMIZE);
 
 	// TODO:  在此添加额外的初始化代码
+	
 	CComboBox*ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO1);
 	ComboBox->SetCurSel(0);//串口号初始化为1
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO2);
@@ -131,6 +133,7 @@ BOOL CMsComDlg::OnInitDialog()
 	GetDlgItem(IDC_SEND)->EnableWindow(false);//禁用发送功能
 	CEdit* ComSta = (CEdit*)GetDlgItem(IDC_COMSTA);
 	ComStatc.SetWindowTextW(_T("串口未打开"));
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -150,7 +153,6 @@ void CMsComDlg::OnSysCommand(UINT nID, LPARAM lParam)
 // 如果向对话框添加最小化按钮，则需要下面的代码
 //  来绘制该图标。  对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
-
 void CMsComDlg::OnPaint()
 {
 	if (IsIconic())
@@ -183,8 +185,6 @@ HCURSOR CMsComDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
-
 void CMsComDlg::OnBnClickedOk()
 {
 	// TODO:  在此添加控件通知处理程序代码
@@ -206,8 +206,6 @@ void CMsComDlg::OnBnClickedExit()
 	// TODO:  在此添加控件通知处理程序代码
 	CloseWindow();
 }
-
-
 void CMsComDlg::OnBnClickedOpen()
 {
 	// TODO:  在此添加控件通知处理程序代码
@@ -216,6 +214,7 @@ void CMsComDlg::OnBnClickedOpen()
 	{
 		MessageBox(_T("串口正在使用"), _T("提示："), MB_OK);
 		CloseHandle(m_hComHandle);
+		MsComSR ComSR =  MsComSR();
 		return;
 	}
 	CString Com_Num;
@@ -225,12 +224,17 @@ void CMsComDlg::OnBnClickedOpen()
 	if (m_hComHandle == INVALID_HANDLE_VALUE)
 	{
 		MessageBox(_T("串口打开失败"),_T("提示："),MB_OK);
+		if (m_hComHandle!=NULL)
+		CloseHandle(m_hComHandle);
 		return;
 	}
 	else
 	{
 		ComStatc.SetWindowTextW(_T("串口已打开"));
 		GetDlgItem(IDC_SEND)->EnableWindow(true);
+		ComSR.SetComHandle(m_hComHandle);
+		ComSR.SetThreadRun(true);
+		SetTimer(1,200,0);
 	}
 	SetupComm(m_hComHandle,512,1204);//启动串口
 	DCB dcb;
@@ -252,54 +256,27 @@ void CMsComDlg::OnBnClickedOpen()
 	UpdateData(false);
 }
 
-
 void CMsComDlg::OnBnClickedSend()
 {
 	UpdateData(true);
-	OVERLAPPED oWrite;//重叠变量
-	BOOL bWrite;
-	memset(&oWrite, 0, sizeof(OVERLAPPED));//初始化重叠变量
-	oWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//创建写串口事件
-	DWORD dwWrite = SendData.GetLength();
-	bWrite = WriteFile(m_hComHandle,(char*)(LPCTSTR)SendData,SendData.GetLength(),&dwWrite,&oWrite);
-	if (!bWrite)
-	{
-		if (GetLastError()==ERROR_IO_PENDING)
-		{
-			WaitForSingleObject(oWrite.hEvent,1000);
-		}
-	}
+	ComSR.SetSendData(SendData);
+	ComSR.SetComHandle(m_hComHandle);
+	ComSR.SendData(ComSR.GetComHandle());
 	UpdateData(false);
 }
-void CMsComDlg::RecvThread()
+void  CMsComDlg::RecvThread()
 {
-	UpdateData(true);
-	OVERLAPPED oRead;
-	BOOL bRead;
-	memset(&oRead,0,sizeof(OVERLAPPED));
-	oRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-	char *cRecvData;
-	cRecvData = new char[1024];
-	memset(cRecvData, 0, 1024);
-	DWORD dwRead = 1024;
-	bRead = ReadFile(m_hComHandle,cRecvData,dwRead,&dwRead,&oRead);
-	if (!bRead)
-	{
-		if (GetLastError() == ERROR_IO_PENDING)
-		{
-			WaitForSingleObject(oRead.hEvent, 1000);
-		}
-	}
-	RecvData+=cRecvData;
-	PurgeComm(m_hComHandle, PURGE_TXCLEAR | PURGE_RXCLEAR);
-	UpdateData(false);
 }
-
 void CMsComDlg::OnBnClickedBedinrecv()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	RecvThread();
-
+	
+	if (ComSR.CreateMyThread() == NULL)
+	{
+		RecvData = "创建线程失败\n";
+	}
+	RecvData += ComSR.GetRecvData();
+	
 }
 
 
@@ -309,5 +286,25 @@ void CMsComDlg::OnBnClickedClose()
 	GetDlgItem(IDC_SEND)->EnableWindow(false);
 	CloseHandle(m_hComHandle);
 	m_hComHandle = NULL;
+	ComSR.SetThreadRun(false);
+	KillTimer(1);
 	ComStatc.SetWindowTextW(_T("串口已关闭"));
+}
+DWORD WINAPI CMsComDlg::MyThreadFunction(LPVOID pParam)
+{
+	return 0;
+}
+
+
+void CMsComDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO:  在此添加消息处理程序代码和/或调用默认值
+	UpdateData(true);
+	if (nIDEvent == 1)
+	{
+		this->RecvData += ComSR.GetRecvData();
+		ComSR.SetRecvData(_T(""));
+	}
+	UpdateData(false);
+	CDialogEx::OnTimer(nIDEvent);
 }
