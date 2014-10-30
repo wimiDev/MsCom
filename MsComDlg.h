@@ -4,7 +4,7 @@
 
 #pragma once
 #include "afxwin.h"
-#include"MsComSR.h"
+//#include"MsComSR.h"
 // CMsComDlg ¶Ô»°¿ò
 class CMsComDlg : public CDialogEx
 {

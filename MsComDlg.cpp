@@ -131,6 +131,7 @@ BOOL CMsComDlg::OnInitDialog()
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO5);
 	ComboBox->SetCurSel(0);//校检位初始化为0
 	GetDlgItem(IDC_SEND)->EnableWindow(false);//禁用发送功能
+	GetDlgItem(IDC_BEGINRECV)->EnableWindow(false);
 	CEdit* ComSta = (CEdit*)GetDlgItem(IDC_COMSTA);
 	ComStatc.SetWindowTextW(_T("串口未打开"));
 
@@ -219,7 +220,7 @@ void CMsComDlg::OnBnClickedOpen()
 	}
 	CString Com_Num;
 	Comnum.GetLBText(Comnum.GetCurSel(), Com_Num);
-	m_hComHandle = CreateFile(Com_Num, GENERIC_READ || GENERIC_WRITE,
+	m_hComHandle = CreateFile(Com_Num, GENERIC_READ|GENERIC_WRITE,
 		0, 0,OPEN_EXISTING, FILE_FLAG_OVERLAPPED,0);//创建串口
 	if (m_hComHandle == INVALID_HANDLE_VALUE)
 	{
@@ -231,12 +232,13 @@ void CMsComDlg::OnBnClickedOpen()
 	else
 	{
 		ComStatc.SetWindowTextW(_T("串口已打开"));
-		GetDlgItem(IDC_SEND)->EnableWindow(true);
+		GetDlgItem(IDC_SEND)->EnableWindow(true);//打开发送按钮
+		GetDlgItem(IDC_BEGINRECV)->EnableWindow(true);//打开开始接收按钮
 		ComSR.SetComHandle(m_hComHandle);
 		ComSR.SetThreadRun(true);
 		SetTimer(1,200,0);
 	}
-	SetupComm(m_hComHandle,512,1204);//启动串口
+	SetupComm(m_hComHandle,512,1024);//设置输入输出缓存区大小
 	DCB dcb;
 	CString str_Bps;
 	CString str_DataBit;
@@ -258,11 +260,11 @@ void CMsComDlg::OnBnClickedOpen()
 
 void CMsComDlg::OnBnClickedSend()
 {
-	UpdateData(true);
+	UpdateData();
 	ComSR.SetSendData(SendData);
 	ComSR.SetComHandle(m_hComHandle);
 	ComSR.SendData(ComSR.GetComHandle());
-	UpdateData(false);
+	//UpdateData(false);
 }
 void  CMsComDlg::RecvThread()
 {
