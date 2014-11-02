@@ -46,7 +46,7 @@ int MsComSR::SendData(HANDLE m_hComHandle)
 	oWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//创建写串口事件
 	DWORD dwWrite = _SendData.GetLength();
 	this->ThreadRun = false;
-	bWrite = WriteFile(m_hComHandle, (char*)(LPCTSTR)_SendData, _SendData.GetLength(), &dwWrite, &oWrite);
+	bWrite = WriteFile(m_hComHandle, (char*)(LPCTSTR)_SendData, dwWrite, &dwWrite, &oWrite);
 	if (!bWrite)
 	{
 		DWORD Error = GetLastError();
@@ -68,8 +68,10 @@ int MsComSR::RecvData(HANDLE m_hComHandle)
 	cRecvData = new char[1024];
 	memset(cRecvData, 0, 1024);
 	DWORD dwRead = 1024;
+	if (ThreadRun)
+	{
 	bRead = ReadFile(m_hComHandle, cRecvData, dwRead, &dwRead, &oRead);
-	if (!bRead)
+	if (!bRead&&ThreadRun)
 	{
 		DWORD Error = GetLastError();
 		if (Error == ERROR_IO_PENDING)
@@ -81,12 +83,13 @@ int MsComSR::RecvData(HANDLE m_hComHandle)
 	_RecvData = cRecvData;
 	PurgeComm(m_hComHandle, PURGE_TXCLEAR | PURGE_RXCLEAR);
 	delete[]cRecvData;
+	}
 	return 0;
 }
 DWORD WINAPI MsComSR::MyThreadFuncatiuon(LPVOID lp)
 {
 	MsComSR*RecvThread = (MsComSR*)lp;
-	while (RecvThread->ThreadRun)
+	while (true)
 	{
 		RecvThread->RecvData(RecvThread->m_hComHandle);
 		Sleep(1);

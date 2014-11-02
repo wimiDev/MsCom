@@ -34,7 +34,6 @@ public:
 	afx_msg void OnBnClickedClear();
 	afx_msg void OnBnClickedExit();
 	afx_msg void OnBnClickedOpen();
-	void RecvThread();
 	static  DWORD WINAPI MyThreadFunction(LPVOID pParam);
 	//HANDLE CreateRecvThread();
 	CComboBox Comnum;
@@ -48,10 +47,12 @@ public:
 //	CEdit RecvData;
 	// 要发送的数据
 	afx_msg void OnBnClickedSend();
+	CString Com_Num;
 	CString SendData;
-	afx_msg void OnBnClickedBedinrecv();
 	// 接收到的数据
 	CString RecvData;
 	afx_msg void OnBnClickedClose();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnBnClickedScancom();
+	afx_msg void OnBnClickedClrearrecv();
 };

@@ -79,9 +79,10 @@ BEGIN_MESSAGE_MAP(CMsComDlg, CDialogEx)
 	ON_BN_CLICKED(ID_EXIT, &CMsComDlg::OnBnClickedExit)
 	ON_BN_CLICKED(ID_OPEN, &CMsComDlg::OnBnClickedOpen)
 	ON_BN_CLICKED(IDC_SEND, &CMsComDlg::OnBnClickedSend)
-	ON_BN_CLICKED(IDC_BEGINRECV, &CMsComDlg::OnBnClickedBedinrecv)
 	ON_BN_CLICKED(IDC_CLOSE, &CMsComDlg::OnBnClickedClose)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_SCANCOM, &CMsComDlg::OnBnClickedScancom)
+	ON_BN_CLICKED(IDC_CLREARRECV, &CMsComDlg::OnBnClickedClrearrecv)
 END_MESSAGE_MAP()
 
 
@@ -123,7 +124,7 @@ BOOL CMsComDlg::OnInitDialog()
 	CComboBox*ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO1);
 	ComboBox->SetCurSel(0);//串口号初始化为1
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO2);
-	ComboBox->SetCurSel(2);//波特率初始化为9600
+	ComboBox->SetCurSel(4);//波特率初始化为9600
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO3);
 	ComboBox->SetCurSel(4);//数据位初始化为8
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO4);
@@ -131,7 +132,6 @@ BOOL CMsComDlg::OnInitDialog()
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO5);
 	ComboBox->SetCurSel(0);//校检位初始化为0
 	GetDlgItem(IDC_SEND)->EnableWindow(false);//禁用发送功能
-	GetDlgItem(IDC_BEGINRECV)->EnableWindow(false);
 	CEdit* ComSta = (CEdit*)GetDlgItem(IDC_COMSTA);
 	ComStatc.SetWindowTextW(_T("串口未打开"));
 
@@ -197,7 +197,6 @@ void CMsComDlg::OnBnClickedClear()
 	// TODO:  在此添加控件通知处理程序代码
 	UpdateData(true);
 	SendData.SetString(_T(""));
-	RecvData.SetString(_T(""));
 	UpdateData(false);
 }
 
@@ -205,7 +204,7 @@ void CMsComDlg::OnBnClickedClear()
 void CMsComDlg::OnBnClickedExit()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	CloseWindow();
+	exit(0);
 }
 void CMsComDlg::OnBnClickedOpen()
 {
@@ -216,27 +215,33 @@ void CMsComDlg::OnBnClickedOpen()
 		MessageBox(_T("串口正在使用"), _T("提示："), MB_OK);
 		CloseHandle(m_hComHandle);
 		MsComSR ComSR =  MsComSR();
+		m_hComHandle = NULL;
 		return;
 	}
-	CString Com_Num;
+	if (Com_Num=="")
 	Comnum.GetLBText(Comnum.GetCurSel(), Com_Num);
 	m_hComHandle = CreateFile(Com_Num, GENERIC_READ|GENERIC_WRITE,
 		0, 0,OPEN_EXISTING, FILE_FLAG_OVERLAPPED,0);//创建串口
 	if (m_hComHandle == INVALID_HANDLE_VALUE)
 	{
 		MessageBox(_T("串口打开失败"),_T("提示："),MB_OK);
-		if (m_hComHandle!=NULL)
-		CloseHandle(m_hComHandle);
+		if (m_hComHandle != NULL)
+			m_hComHandle = NULL;
 		return;
 	}
 	else
 	{
+		UpdateData();
 		ComStatc.SetWindowTextW(_T("串口已打开"));
 		GetDlgItem(IDC_SEND)->EnableWindow(true);//打开发送按钮
-		GetDlgItem(IDC_BEGINRECV)->EnableWindow(true);//打开开始接收按钮
 		ComSR.SetComHandle(m_hComHandle);
+		if (ComSR.CreateMyThread() == NULL)
+		{
+			RecvData = "创建线程失败\n";
+		}
 		ComSR.SetThreadRun(true);
-		SetTimer(1,200,0);
+		SetTimer(1,100,0);
+		RecvData += ComSR.GetRecvData();
 	}
 	SetupComm(m_hComHandle,512,1024);//设置输入输出缓存区大小
 	DCB dcb;
@@ -266,22 +271,6 @@ void CMsComDlg::OnBnClickedSend()
 	ComSR.SendData(ComSR.GetComHandle());
 	//UpdateData(false);
 }
-void  CMsComDlg::RecvThread()
-{
-}
-void CMsComDlg::OnBnClickedBedinrecv()
-{
-	// TODO:  在此添加控件通知处理程序代码
-	
-	if (ComSR.CreateMyThread() == NULL)
-	{
-		RecvData = "创建线程失败\n";
-	}
-	RecvData += ComSR.GetRecvData();
-	
-}
-
-
 void CMsComDlg::OnBnClickedClose()
 {
 	// TODO:  在此添加控件通知处理程序代码
@@ -309,4 +298,35 @@ void CMsComDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 	UpdateData(false);
 	CDialogEx::OnTimer(nIDEvent);
+}
+void CMsComDlg::OnBnClickedScancom()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	HANDLE SCAN;
+	for (int i = 0; i <= Comnum.GetCount(); i++)
+	{
+		Comnum.GetLBText(i, Com_Num);
+		SCAN=CreateFile(Com_Num, GENERIC_READ | GENERIC_WRITE,
+			0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+		if ( SCAN!= INVALID_HANDLE_VALUE)
+		{
+			Comnum.SetCurSel(i);
+			CloseHandle(SCAN);
+			if (SCAN != NULL)
+			{
+				SCAN = NULL;
+			}
+			break;
+		}
+	}
+	return;
+}
+
+
+void CMsComDlg::OnBnClickedClrearrecv()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	UpdateData(TRUE);
+	RecvData.SetString(_T(""));
+	UpdateData(FALSE);
 }
