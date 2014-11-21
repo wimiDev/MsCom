@@ -1,8 +1,13 @@
-﻿生成启动时间为 10/31/2014 9:44:42 PM。
+﻿生成启动时间为 11/18/2014 9:54:51 PM。
      1>项目“F:\.NET program\MsCom\MsCom\MsCom.vcxproj”在节点 2 上(Build 个目标)。
      1>ClCompile:
-         D:\vs2013\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D _UNICODE /D UNICODE /D _AFXDLL /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\MsCom.pch" /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt MsComSR.cpp
+         D:\vs2013\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D _UNICODE /D UNICODE /D _AFXDLL /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\MsCom.pch" /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt MsCom.cpp MsComDlg.cpp MsComSR.cpp
+         MsComDlg.cpp
+     1>f:\.net program\mscom\mscom\mscomdlg.cpp(325): warning C4101: “SCAN”: 未引用的局部变量
+         正在生成代码...
+         正在跳过...(未检测到相关更改)
          MsComSR.cpp
+         MsCom.cpp
        Link:
          D:\vs2013\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"F:\.NET program\MsCom\Debug\MsCom.exe" /INCREMENTAL /NOLOGO /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /manifestinput:D:\vs2013\VC\Include\Manifest\dpiaware.manifest /DEBUG /PDB:"F:\.NET program\MsCom\Debug\MsCom.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /ENTRY:"wWinMainCRTStartup" /DYNAMICBASE /NXCOMPAT /IMPLIB:"F:\.NET program\MsCom\Debug\MsCom.lib" /MACHINE:X86 Debug\MsCom.res
          Debug\MsCom.obj
@@ -14,4 +19,4 @@
 
 生成成功。
 
-已用时间 00:00:01.59
+已用时间 00:00:22.62

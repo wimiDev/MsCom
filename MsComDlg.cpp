@@ -49,6 +49,7 @@ CMsComDlg::CMsComDlg(CWnd* pParent /*=NULL*/)
 : CDialogEx(CMsComDlg::IDD, pParent)
 , SendData(_T(""))
 , RecvData(_T(""))
+, iTimeSend(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	ComSR = MsComSR();
@@ -68,6 +69,7 @@ void CMsComDlg::DoDataExchange(CDataExchange* pDX)
 	//  DDX_Control(pDX, IDC_SENDDATA, SendData);
 	DDX_Text(pDX, IDC_SENDDATA, SendData);
 	DDX_Text(pDX, IDC_RECVDATA, RecvData);
+	DDX_Text(pDX, IDC_TIMESEND, iTimeSend);
 }
 
 BEGIN_MESSAGE_MAP(CMsComDlg, CDialogEx)
@@ -83,6 +85,7 @@ BEGIN_MESSAGE_MAP(CMsComDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_SCANCOM, &CMsComDlg::OnBnClickedScancom)
 	ON_BN_CLICKED(IDC_CLREARRECV, &CMsComDlg::OnBnClickedClrearrecv)
+ON_BN_CLICKED(IDC_BTIMESEND, &CMsComDlg::OnBnClickedBtimesend)
 END_MESSAGE_MAP()
 
 
@@ -132,6 +135,7 @@ BOOL CMsComDlg::OnInitDialog()
 	ComboBox = (CComboBox*)GetDlgItem(IDC_COMBO5);
 	ComboBox->SetCurSel(0);//校检位初始化为0
 	GetDlgItem(IDC_SEND)->EnableWindow(false);//禁用发送功能
+	GetDlgItem(IDC_BTIMESEND)->EnableWindow(false);
 	CEdit* ComSta = (CEdit*)GetDlgItem(IDC_COMSTA);
 	ComStatc.SetWindowTextW(_T("串口未打开"));
 
@@ -220,8 +224,13 @@ void CMsComDlg::OnBnClickedOpen()
 	}
 	if (Com_Num=="")
 	Comnum.GetLBText(Comnum.GetCurSel(), Com_Num);
-	m_hComHandle = CreateFile(Com_Num, GENERIC_READ|GENERIC_WRITE,
-		0, 0,OPEN_EXISTING, FILE_FLAG_OVERLAPPED,0);//创建串口
+	m_hComHandle = CreateFile(Com_Num, 
+		GENERIC_READ|GENERIC_WRITE,
+		0,
+		0,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL|FILE_FLAG_OVERLAPPED,
+		0);//创建串口
 	if (m_hComHandle == INVALID_HANDLE_VALUE)
 	{
 		MessageBox(_T("串口打开失败"),_T("提示："),MB_OK);
@@ -234,6 +243,7 @@ void CMsComDlg::OnBnClickedOpen()
 		UpdateData();
 		ComStatc.SetWindowTextW(_T("串口已打开"));
 		GetDlgItem(IDC_SEND)->EnableWindow(true);//打开发送按钮
+		GetDlgItem(IDC_BTIMESEND)->EnableWindow(true);
 		ComSR.SetComHandle(m_hComHandle);
 		if (ComSR.CreateMyThread() == NULL)
 		{
@@ -275,6 +285,7 @@ void CMsComDlg::OnBnClickedClose()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	GetDlgItem(IDC_SEND)->EnableWindow(false);
+	GetDlgItem(IDC_BTIMESEND)->EnableWindow(false);
 	CloseHandle(m_hComHandle);
 	m_hComHandle = NULL;
 	ComSR.SetThreadRun(false);
@@ -290,39 +301,47 @@ DWORD WINAPI CMsComDlg::MyThreadFunction(LPVOID pParam)
 void CMsComDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO:  在此添加消息处理程序代码和/或调用默认值
+	
 	UpdateData(true);
+	CDialogEx::OnTimer(nIDEvent);
 	if (nIDEvent == 1)
 	{
 		this->RecvData += ComSR.GetRecvData();
 		ComSR.SetRecvData(_T(""));
 	}
+	if (nIDEvent == 2)
+	{
+		ComSR.SetSendData(SendData);
+		ComSR.SetComHandle(m_hComHandle);
+		ComSR.SendData(ComSR.GetComHandle());
+	}
 	UpdateData(false);
-	CDialogEx::OnTimer(nIDEvent);
+	
 }
 void CMsComDlg::OnBnClickedScancom()
 {
 	// TODO:  在此添加控件通知处理程序代码
+	UpdateData(true);
 	HANDLE SCAN;
-	for (int i = 0; i <= Comnum.GetCount(); i++)
+	TCHAR Keydata[128]=_T("HARDWARE\\DEVICEMAP\\SERIALCOMM");
+	ULONG size = sizeof(Keydata) / sizeof(*Keydata);
+	TCHAR _Keydata[5] = _T("");
+	CRegKey*key = new CRegKey();
+	long int cout=key->Open(HKEY_LOCAL_MACHINE,Keydata,KEY_READ);
+	if (cout!=0)
 	{
-		Comnum.GetLBText(i, Com_Num);
-		SCAN=CreateFile(Com_Num, GENERIC_READ | GENERIC_WRITE,
-			0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
-		if ( SCAN!= INVALID_HANDLE_VALUE)
-		{
-			Comnum.SetCurSel(i);
-			CloseHandle(SCAN);
-			if (SCAN != NULL)
-			{
-				SCAN = NULL;
-			}
-			break;
-		}
+		UpdateData(true);
+		RecvData += "\n！！该计算机未使用任何串口，或者串口故障！！\n";
+		return;
 	}
+	cout=key->QueryStringValue(_T("\\Device\\Serial2"),_Keydata,&size);
+	
+	Com_Num = _Keydata;
+	Comnum.SetWindowTextW(Com_Num);
+	key->Close();
+	UpdateData(false);
 	return;
 }
-
-
 void CMsComDlg::OnBnClickedClrearrecv()
 {
 	// TODO:  在此添加控件通知处理程序代码
@@ -330,3 +349,16 @@ void CMsComDlg::OnBnClickedClrearrecv()
 	RecvData.SetString(_T(""));
 	UpdateData(FALSE);
 }
+
+void CMsComDlg::OnBnClickedBtimesend()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	UpdateData(true);
+	if (iTimeSend <= 0)
+	{
+		RecvData += "!!!您的输入的发送时间间隔有误!!!，\n!!!!使用该功能时时间间隔数据不能为空或者为负数!!!!\n";
+	}
+	SetTimer(2,iTimeSend,0);
+	UpdateData(false);
+}
+

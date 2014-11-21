@@ -55,4 +55,7 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedScancom();
 	afx_msg void OnBnClickedClrearrecv();
+	// 发送间隔时间
+	int iTimeSend;
+	afx_msg void OnBnClickedBtimesend();
 };
